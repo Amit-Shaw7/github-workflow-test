@@ -10,11 +10,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Check out the repository code
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: SSH into EC2 and Deploy Docker Application
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -22,20 +20,27 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # Navigate to your project directory (change this path to match your actual EC2 setup)
+            # 1. Move into your project folder and pull latest code
             cd /home/ubuntu/your-project-directory
-
-            # Pull the latest changes from Git
             git pull origin main
 
-            # Update or create the .env file with your PORT variable
+            # 2. Write your PORT secret into an .env file
             echo "PORT=${{ secrets.PORT }}" > .env
 
-            # Shut down existing containers to prevent conflicts
-            docker-compose down
+            # 3. Stop and delete the old container if it exists (prevents naming conflicts)
+            docker stop node-app-container || true
+            docker rm node-app-container || true
 
-            # Rebuild images and start containers in detached mode
-            docker-compose up -d --build
+            # 4. Build a new image directly from your Dockerfile
+            docker build -t node-app-image .
 
-            # Clean up old, unused Docker images to save EC2 disk space
+            # 5. Run the new container using your Dockerfile config
+            docker run -d \
+              --name node-app-container \
+              --env-file .env \
+              -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
+              --restart always \
+              node-app-image
+
+            # 6. Delete old, unused images to save EC2 disk space
             docker image prune -f
