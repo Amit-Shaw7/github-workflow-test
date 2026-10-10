@@ -20,27 +20,33 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. Move into your project folder and pull latest code
-            cd /home/ubuntu/your-project-directory
+            # 1. Force the script to fail if the directory does not exist
+            cd /home/ubuntu/your-project-directory || { echo "ERROR: Project directory not found!"; exit 1; }
+
+            # 2. Print current location for debugging
+            echo "Currently working in: $(pwd)"
+
+            # 3. Pull latest changes
             git pull origin main
 
-            # 2. Write your PORT secret into an .env file
+            # 4. Re-create the env file
             echo "PORT=${{ secrets.PORT }}" > .env
 
-            # 3. Stop and delete the old container if it exists (prevents naming conflicts)
-            docker stop node-app-container || true
-            docker rm node-app-container || true
+            # 5. Stop and remove old container
+            sudo docker stop node-app-container || true
+            sudo docker rm node-app-container || true
 
-            # 4. Build a new image directly from your Dockerfile
-            docker build -t node-app-image .
+            # 6. Build the new image
+            sudo docker build -t node-app-image .
 
-            # 5. Run the new container using your Dockerfile config
-            docker run -d \
+            # 7. Run the new container
+            sudo docker run -d \
               --name node-app-container \
               --env-file .env \
               -p ${{ secrets.PORT }}:${{ secrets.PORT }} \
               --restart always \
               node-app-image
 
-            # 6. Delete old, unused images to save EC2 disk space
-            docker image prune -f
+            # 8. Verify running containers right inside the GitHub Actions logs
+            echo "------ RUNNING CONTAINERS ON EC2 ------"
+            sudo docker ps -a
