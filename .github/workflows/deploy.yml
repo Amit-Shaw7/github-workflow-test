@@ -27,7 +27,7 @@ jobs:
 
             # 2. Check if the directory exists, print its contents
             echo "=== DIRECTORY CHECK ==="
-            cd /home/ubuntu/your-project-directory || { echo "Directory not found!"; exit 1; }
+            cd /home/ubuntu/github-workflow-test || { echo "Directory not found!"; exit 1; }
             echo "Current Directory Path: $(pwd)"
             echo "Files in this directory:"
             ls -la
